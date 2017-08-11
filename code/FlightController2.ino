@@ -42,8 +42,8 @@ float analog_sen = 0.5/128.0;
 
 //stablization varibles
 
-float p_gain = 1;
-float d_gain = 0.03;
+float p_gain = 1;           
+float d_gain = 0.03;          
 float i_gain = 1.0/4.0;
 
 float yaw_d_gain = 3.0/16.0;
@@ -113,10 +113,10 @@ void loop() {
   pitch_sum += angle_pitch_output;                                             //sums the pitch and roll angle for the i_gain
   roll_sum += angle_roll_output;
 
-  left  = power*4.0*ccw  - (angle_roll_output*p_gain  + gyro_y*d_gain  + roll_sum*i_gain  + yaw_d_gain*gyro_z) + 1000;       //left , 5
-  right = power*4.0*ccw  + (angle_roll_output*p_gain  + gyro_y*d_gain  + roll_sum*i_gain  - yaw_d_gain*gyro_z) + 1000;       //right , 6
-  back  = power*4.0*cw   + (angle_pitch_output*p_gain + gyro_x*d_gain  + pitch_sum*i_gain + yaw_d_gain*gyro_z) + 1000;       //back , 9
-  front = power*4.0*cw   - (angle_pitch_output*p_gain + gyro_x*d_gain  + pitch_sum*i_gain - yaw_d_gain*gyro_z) + 1000;       //front , 10
+  left  = power*4.0*ccw  - (angle_roll_output*p_gain  + gyro_y*d_gain  + roll_sum*i_gain  + yaw_d_gain*gyro_z) + 1000;       //left wing , 5
+  right = power*4.0*ccw  + (angle_roll_output*p_gain  + gyro_y*d_gain  + roll_sum*i_gain  - yaw_d_gain*gyro_z) + 1000;       //right wing, 6
+  back  = power*4.0*cw   + (angle_pitch_output*p_gain + gyro_x*d_gain  + pitch_sum*i_gain + yaw_d_gain*gyro_z) + 1000;       //back wing, 9
+  front = power*4.0*cw   - (angle_pitch_output*p_gain + gyro_x*d_gain  + pitch_sum*i_gain - yaw_d_gain*gyro_z) + 1000;       //front wing, 10
 
   //user inputs from the analog stick on the controller
   left  += power*analog_sen*(analog_x - analog_y);
