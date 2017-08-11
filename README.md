@@ -44,5 +44,5 @@ Arduino Connections:
       A0       potentiometer
       A1       X axis of analog stick
       A2       Y axis of analog stick
-      
+     
     
