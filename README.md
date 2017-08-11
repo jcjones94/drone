@@ -39,10 +39,11 @@ Arduino Connections:
     A5    SDA on mpu 6050 gyro/acc
     
   controller Arduino
-      pin 12   data line for rf transmitter
-      pin 13   off/on led
-      A0       potentiometer
-      A1       X axis of analog stick
-      A2       Y axis of analog stick
+  
+    pin 12   data line for rf transmitter
+    pin 13   off/on led
+    A0       potentiometer
+    A1       X axis of analog stick
+    A2       Y axis of analog stick
      
     
