@@ -22,7 +22,7 @@ Arduino Connections:
     4
     5     left wing esc
     6     right wing esc
-    7
+    7 
     8
     9     back wing esc
     10    front wing esc
