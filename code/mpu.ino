@@ -30,6 +30,7 @@ void loop(){
 void read_mpu(){
   Wire.beginTransmission(0x68);                                        //Start communicating with the MPU-6050
   Wire.write(0x74);                                                    //Send the requested starting register
+  Wire.write(0x0c);    
   Wire.endTransmission();                                              //End the transmission
   Wire.requestFrom(0x68,12);                                           //Request 14 bytes from the MPU-6050
   
