@@ -4,19 +4,18 @@
 int gyro_x, gyro_y, gyro_z;
 int acc_x, acc_y, acc_z;
 
-
-void setup(){
- 
-  Serial.begin(115200);
-  Wire.begin();
- 
- 
-  // INTERRUPT DETECTION ROUTINE
+// INTERRUPT DETECTION ROUTINE
   volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
   void dmpDataReady() {
     mpuInterrupt = true;
   }
  
+
+void setup(){
+ 
+  Serial.begin(115200);
+  Wire.begin();
+
  
   initialize_mpu();
  
