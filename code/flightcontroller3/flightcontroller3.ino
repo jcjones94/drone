@@ -45,26 +45,28 @@ ServoTimer2 m9;
 ServoTimer2 m10;
 
 RH_ASK driver;
-uint8_t buf[12];                    //reciever buffer
+uint8_t buf[3];       //reciever buffer buf[power, analog_x, analog_y, rotation]
 uint8_t buflen = sizeof(buf);
 int analog_x, analog_y;
-float analog_sen = 0.6/128.0;
+float analog_sen = 0.004;
 
-float p_gain = 300.0;//300.0;
-float d_gain = 7500.0;//5500.0;
-float i_gain = 20.0;//11.0;
+//flight stabilization varibles
+float p_gain = 300.0;       //adjusts the drone based on its angle  (d = derivative)
+float d_gain = 7500.0;      //adjusts the drone based on its rate of in the angle (p = proportional)
+float i_gain = 20.0;        //adjusts the drone based on its time spent at an angle (i = integral)
+float x_sum = 0, y_sum = 0, z_sum = 0;      //sum of the angle used for i_gain
+float gyro_x = 0.0 , gyro_y = 0.0, gyro_z = 0.0;    //used as previous mpu angle to calculate change in angle for d_gain 
 
-float gyro_z_i = 0;
+float gyro_z_i = 0;         //adjusts the z angle to be zero at start up
+float yaw_p_gain = 200.0;  //prevents drone rotation 
+float ccw = 1.0, cw = 1.0;  //drone rotations
 
-float x_sum = 0, y_sum, z_sum;
+int analog_x_adj = -5;  //adjust if analog stick isn't zero at rest;
+int analog_y_adj = 2;
+float pitch_adj = -0.11;
+float roll_adj = 0.02;
 
-float yaw_p_gain = 200.0;
-
-float ccw = 1.0, cw = 1.05;
-
-float gyro_x = 0.0 , gyro_y = 0.0, gyro_z = 0.0; 
-
-int tmp = 0;
+unsigned long timeLastRec;
 bool set = false;
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
@@ -168,38 +170,33 @@ void setup() {
 // ================================================================
 
 void loop() {
+    /*gets controller data on successful received and resets timeLastRec 
+      if no signal is received for 5 seconds the drone resets all controller 
+      data and decreases power for slow fall*/
     if (driver.recv(buf, &buflen)) {
-       //Serial.println("update");                                        //used for debugging
-       analog_x = buf[1] - 128 - 5;
-       analog_y = buf[2] - 128 + 2;
-       tmp = 0;
-    }else if(tmp >= 300 && buf[0] > 80){                                 //if no update is rec then drone lowers power to 75         
+       analog_x = buf[1] - 128 + analog_x_adj; //the analog stick is around 128 at rest
+       analog_y = buf[2] - 128 + analog_y_adj; //so 128 is subtracted to make it 0 at rest
+       timeLastRec = millis();
+    }else if(timeLastRec < (millis() - 5000) && buf[0] > 80 || !dmpReady){          
        buf[0]--;
        analog_x = 0;
-       analog_y = 0;                                                     //so the drone doesnt fly away
+       analog_y = 0;                                                     
     }
-    tmp++;
 
-    if(power < buf[0]){                                                   //prevents power spikes
+    
+    //prevents power from spiking
+    if(power < buf[0]){                                                   
       power++;
     }else if(power > buf[0]){
       power--; 
-    }
-    // if programming failed, don't try to do anything
-    if (!dmpReady) return;
+    ]
 
-    // wait for MPU interrupt or extra packet(s) available
+    // wait for MPU interrupt but breaks is mpu Interrupt flag 
     while (!mpuInterrupt && fifoCount < packetSize) {
-        // other program behavior stuff here
-        // .
-        // .
-        // .
-        // if you are really paranoid you can frequently test in between other
-        // stuff to see if mpuInterrupt is true, and if so, "break;" from the
-        // while() loop to immediately process the MPU data
-        // .
-        // .
-        // .
+        /*
+        if(mpu.getIntStatus() & 0x01){
+            break;
+        }*/
     }
 
     // reset interrupt flag and get INT_STATUS byte
@@ -220,103 +217,94 @@ void loop() {
         // wait for correct available data length, should be a VERY short wait
         while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
 
-        // read a packet from FIFO
+        // read packet from FIFO
         mpu.getFIFOBytes(fifoBuffer, packetSize);
         
         // track FIFO count here in case there is > 1 packet available
         // (this lets us immediately read more without waiting for an interrupt)
         fifoCount -= packetSize;
-
-       
-
-     
-            // display Euler angles in degrees
-            mpu.dmpGetQuaternion(&q, fifoBuffer);
-            mpu.dmpGetGravity(&gravity, &q);
-            mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-            ypr[1] -= 0.11;
-            ypr[2] += 0.02;
+            
+        mpu.dmpGetQuaternion(&q, fifoBuffer);
+        mpu.dmpGetGravity(&gravity, &q);
+        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+        ypr[1] += pitch_adj; 
+        ypr[2] += roll_adj;
+        /*
             Serial.print("ypr\t");
             Serial.print(ypr[0] * 180/M_PI);
             Serial.print("\t");
             Serial.print(ypr[1] * 180/M_PI);
             Serial.print("\t");
-            Serial.print(ypr[2] * 180/M_PI);
-            if(!set && millis() > 20000){
-               gyro_z_i = ypr[0];  
-               set = true;
-               Serial.print("ready");
-            }
-
-            if((ypr[0] - gyro_z) > M_PI){
-                gyro_z_i += 2*M_PI;  
-            }else if((ypr[0] - gyro_z) < -M_PI){
-                gyro_z_i -= 2*M_PI;  
-            }
-
-            //Serial.print("\t");
-            /*Serial.print(ypr[0] - gyro_z_i);*/
-            left  = power*4.0*cw  
-                  - (ypr[2]*p_gain  + (ypr[2] - gyro_x)*d_gain + i_gain*x_sum 
-                  + (yaw_p_gain*(ypr[0] - gyro_z_i))) + 1000;       //left , 10
-            right = power*4.0*cw  
-                  + (ypr[2]*p_gain  + (ypr[2] - gyro_x)*d_gain + i_gain*x_sum 
-                  - (yaw_p_gain*(ypr[0] - gyro_z_i))) + 1000;       //right , 9
-            back  = power*4.0*ccw   
-                  + (ypr[1]*p_gain  + (ypr[1] - gyro_y)*d_gain + i_gain*y_sum 
-                  + (yaw_p_gain*(ypr[0] - gyro_z_i))) + 1000;       //back , 5
-            front = power*4.0*ccw   
-                  - (ypr[1]*p_gain  + (ypr[1] - gyro_y)*d_gain + i_gain*y_sum 
-                  - (yaw_p_gain*(ypr[0] - gyro_z_i))) + 1000;       //front , 6
-                  
-            gyro_y = ypr[1];
-            gyro_x = ypr[2];
-            gyro_z = ypr[0];
-            
-            if(power > 60 
-            && analog_x < 70 && analog_x > -70 
-            && analog_y < 70 && analog_y > -70){
-            
-              x_sum += (ypr[2]);
-              y_sum += (ypr[1]);
-              z_sum += (ypr[0]);
-            }
-
-
-            
-            left  += power*analog_sen*(analog_x - analog_y);
-            right -= power*analog_sen*(analog_x - analog_y);
-            back  -= power*analog_sen*(analog_x + analog_y);
-            front += power*analog_sen*(analog_x + analog_y);
-            
-            /*Serial.print("\t");
-            Serial.print(left);
-            Serial.print("\t");
-            Serial.print(x_sum);
-            Serial.print("\t");
-            Serial.print(analog_x);
-            Serial.print("\t");*/
-            Serial.println(tmp);
-
-            if(front < 1000)                                                  
-                front = 1000;
-            if(back < 1000)
-                back = 1000;
-            if(left < 1000)
-                left = 1000;
-            if(right < 1000)
-                right = 1000;
-               
-            m5.write(back);
-            m6.write(front);
-            m9.write(right);
-            m10.write(left);
-
-       
-
+            Serial.print(ypr[2] * 180/M_PI);*/
+        if(!set && millis() > 20000){
+            gyro_z_i = ypr[0];  
+            set = true;
+            Serial.print("ready");
+        }
         
-    
+        //as the drone rotates past pi it drops to -pi so when this happens 2pi is added to prevent the angle spike
+        //same goes for if the drone is rotating the other way but instead 2pi is subtracted
+        if((ypr[0] - gyro_z) > M_PI){
+            gyro_z_i += 2*M_PI;  
+        }else if((ypr[0] - gyro_z) < -M_PI){
+            gyro_z_i -= 2*M_PI;  
+        }
+
+        //power is applied to the motors along with anglur correction data from the mpu
+        //motor values have to be between 2000 and 1000
+        left  = power*4.0*cw                                                
+              - (ypr[2]*p_gain  + (ypr[2] - gyro_x)*d_gain + i_gain*x_sum 
+              + (yaw_p_gain*(ypr[0] - gyro_z_i))) + 1000;       //left, 10
+        right = power*4.0*cw  
+              + (ypr[2]*p_gain  + (ypr[2] - gyro_x)*d_gain + i_gain*x_sum 
+              - (yaw_p_gain*(ypr[0] - gyro_z_i))) + 1000;       //right , 9
+        back  = power*4.0*ccw   
+              + (ypr[1]*p_gain  + (ypr[1] - gyro_y)*d_gain + i_gain*y_sum 
+              + (yaw_p_gain*(ypr[0] - gyro_z_i))) + 1000;       //back , 5
+        front = power*4.0*ccw   
+              - (ypr[1]*p_gain  + (ypr[1] - gyro_y)*d_gain + i_gain*y_sum 
+              - (yaw_p_gain*(ypr[0] - gyro_z_i))) + 1000;       //front , 6
         
+        //adds the analog stick data to motor values
+        left  += power*analog_sen*(analog_x - analog_y);
+        right -= power*analog_sen*(analog_x - analog_y);
+        back  -= power*analog_sen*(analog_x + analog_y);
+        front += power*analog_sen*(analog_x + analog_y);
+          
+        //prevtents motor values from dropping below 1000
+        if(front < 1000)                                                  
+            front = 1000;
+        if(back < 1000)
+            back = 1000;
+        if(left < 1000)
+            left = 1000;
+        if(right < 1000)
+            right = 1000;
+        
+        //sends motor values to ECS
+        m5.write(back);
+        m6.write(front);
+        m9.write(right);
+        m10.write(left);
+        
+        
+        //saves the current angles to calculate angle change for next iteration
+        gyro_y = ypr[1];
+        gyro_x = ypr[2];
+        gyro_z = ypr[0];
+        
+        //keeps running sum of the angles but only if drone is in flight which prevents the drone from
+        //trying making angle corrections while resting on an uneven surface. also stops if user gives analog
+        //input
+        if(power > 60 
+           && analog_x < 70 && analog_x > -70 
+           && analog_y < 70 && analog_y > -70){
+            
+            x_sum += (ypr[2]);
+            y_sum += (ypr[1]);
+            z_sum += (ypr[0]);
+        }
+ 
 
         // blink LED to indicate activity
         blinkState = !blinkState;
