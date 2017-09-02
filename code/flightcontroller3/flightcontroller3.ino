@@ -36,18 +36,19 @@ VectorFloat gravity;    // [x, y, z]            gravity vector
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 
-float power = 0;
+//motors varibles
+ServoTimer2 m5;     // pin 5
+ServoTimer2 m6;     // pin 6
+ServoTimer2 m9;     // pin 9
+ServoTimer2 m10;    // pin 10
 float front, back, left, right;   //motor power varibles
 
-ServoTimer2 m5; 
-ServoTimer2 m6;
-ServoTimer2 m9;
-ServoTimer2 m10;
-
+//reviever varibles
 RH_ASK driver;
 uint8_t buf[3];       //reciever buffer buf[power, analog_x, analog_y, rotation]
 uint8_t buflen = sizeof(buf);
 int analog_x, analog_y;
+float power = 0;
 float analog_sen = 0.004;
 
 //flight stabilization varibles
@@ -61,11 +62,13 @@ float gyro_z_i = 0;         //adjusts the z angle to be zero at start up
 float yaw_p_gain = 200.0;  //prevents drone rotation 
 float ccw = 1.0, cw = 1.0;  //drone rotations
 
-int analog_x_adj = -5;  //adjust if analog stick isn't zero at rest;
+//adjustment varibles
+int analog_x_adj = -5;  
 int analog_y_adj = 2;
 float pitch_adj = -0.11;
 float roll_adj = 0.02;
 
+//misc
 unsigned long timeLastRec;
 bool set = false;
 // ================================================================
@@ -156,8 +159,10 @@ void setup() {
         Serial.println(F(")"));
     }
 
-    if (!driver.init())                                                  //init 433mhz rf receiver
-         Serial.println("init failed");//Use only for debugging
+    //init 433mhz rf receiver
+    if (!driver.init())
+         Serial.println("init failed");
+    
     // configure LED for output
     pinMode(LED_PIN, OUTPUT);
     
@@ -170,9 +175,9 @@ void setup() {
 // ================================================================
 
 void loop() {
-    /*gets controller data on successful received and resets timeLastRec 
-      if no signal is received for 5 seconds the drone resets all controller 
-      data and decreases power for slow fall*/
+    //gets controller data on successful received and resets timeLastRec 
+    //if no signal is received for 5 seconds the drone resets all controller 
+    //data and decreases power for slow fall
     if (driver.recv(buf, &buflen)) {
        analog_x = buf[1] - 128 + analog_x_adj; //the analog stick is around 128 at rest
        analog_y = buf[2] - 128 + analog_y_adj; //so 128 is subtracted to make it 0 at rest
