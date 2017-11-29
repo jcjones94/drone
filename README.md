@@ -46,5 +46,5 @@ Arduino Connections:
     A1       X axis of analog stick
     A2       Y axis of analog stick
      
-![download](https://user-images.githubusercontent.com/29937430/33350980-7572ca3e-d456-11e7-94db-946d6203670b.jpg)
+![drone_flying 1](https://user-images.githubusercontent.com/29937430/33351304-f8d3daca-d457-11e7-9558-9c5d3d199b4b.gif)
 
