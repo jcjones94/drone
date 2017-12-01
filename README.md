@@ -8,8 +8,7 @@ The controller is built using an potentiometer for power and playstation analog 
 Libraries:
   Using Radiohead for rf transmitting and receiving. Using ServoTimer2 for controlling the power sent to the motors. 
   Im using ServoTimer2 because radiohead and servo.h have conflicting libraries so only one can be used. 
-  wire.h for connecting to MPU6050. Currently using my own code for communicating with the MPU6050 because it allows me to change the 
-  sensitivity of the gyro/acc
+  wire.h for connecting to MPU6050. 
 
 Arduino Connections:
 
