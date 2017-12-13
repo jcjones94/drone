@@ -44,7 +44,11 @@ Arduino Connections:
     A0       potentiometer
     A1       X axis of analog stick
     A2       Y axis of analog stick
-     
+    
+ videos of drone can be seen below or on youtube
+ 
+ https://www.youtube.com/watch?v=MXb5qLYUfkA
+ 
 ![drone_flying 1](https://user-images.githubusercontent.com/29937430/33351304-f8d3daca-d457-11e7-9558-9c5d3d199b4b.gif)
 
 ![video_1 2](https://user-images.githubusercontent.com/29937430/33351548-1645a1a0-d459-11e7-90f2-c9492be043db.gif)
